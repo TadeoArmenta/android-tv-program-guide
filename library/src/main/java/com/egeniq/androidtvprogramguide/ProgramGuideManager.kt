@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Egeniq
+ * Copyright (c) 2020, Egeniq
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,8 +211,15 @@ class ProgramGuideManager<T> {
         setTimeRange(startUtcMillis, startUtcMillis + viewPortWidth)
     }
 
-    internal fun jumpTo(timeMillis: Long) {
-        shiftTime(timeMillis - fromUtcMillis)
+    /**
+     * Jumps to a specific position.
+     * @param timeMillis The time in milliseconds to jump to.
+     * @return True if the time was shifted. False if not change was triggered (time was the same as before).
+     */
+    internal fun jumpTo(timeMillis: Long) : Boolean {
+        val timeShift = timeMillis - fromUtcMillis
+        shiftTime(timeShift)
+        return timeShift != 0L
     }
 
     /** Shifts the time range by the given time. Also makes the guide scroll the views.  */
@@ -304,11 +311,12 @@ class ProgramGuideManager<T> {
         } else channels[channelIndex]
     }
 
-    fun getCurrentProgram(): ProgramGuideSchedule<T>? {
+    fun getCurrentProgram(specificChannelId: String? = null): ProgramGuideSchedule<T>? {
         val firstChannel = channels.firstOrNull() ?: return null
         val now = FixedZonedDateTime.now().toEpochSecond() * 1000
         var bestMatch: ProgramGuideSchedule<T>? = null
-        channelEntriesMap[firstChannel.id]?.let {
+        val channelId = specificChannelId ?: firstChannel.id
+        channelEntriesMap[channelId]?.let {
             it.forEach { schedule ->
                 if (schedule.startsAtMillis < now) {
                     bestMatch = schedule
@@ -319,6 +327,15 @@ class ProgramGuideManager<T> {
             }
         }
         return bestMatch
+    }
+
+    fun getChannelIndex(channelId: String): Int? {
+        val index = channels.indexOfFirst { it.id == channelId }
+        if (index < 0) {
+            return null
+        } else {
+            return index
+        }
     }
 
     @MainThread
